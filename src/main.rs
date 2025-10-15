@@ -1,8 +1,8 @@
 mod from_parquet;
 
 use nu_plugin::{
-    serve_plugin, EngineInterface, EvaluatedCall, MsgPackSerializer, Plugin, PluginCommand,
-    SimplePluginCommand,
+    EngineInterface, EvaluatedCall, MsgPackSerializer, Plugin, PluginCommand, SimplePluginCommand,
+    serve_plugin,
 };
 use nu_protocol::{Category, Example, LabeledError, Signature, Type, Value};
 
@@ -43,7 +43,7 @@ impl SimplePluginCommand for FromParquet {
             .filter()
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Convert from .parquet binary into table".into(),
@@ -81,7 +81,7 @@ impl SimplePluginCommand for FromParquet {
                     "requires binary input, got {}",
                     v.get_type()
                 ))
-                .with_label("Expected binary from pipeline", call.head))
+                .with_label("Expected binary from pipeline", call.head));
             }
         }
     }
@@ -108,7 +108,7 @@ impl SimplePluginCommand for ToParquet {
             .filter()
     }
 
-    fn examples(&self) -> Vec<Example> {
+    fn examples(&self) -> Vec<Example<'_>> {
         vec![
             Example {
                 description: "Convert from table into parquet binary".into(),
@@ -138,7 +138,7 @@ impl SimplePluginCommand for ToParquet {
                     "requires table input, got {}",
                     v.get_type()
                 ))
-                .with_label("Expected table from pipeline", call.head))
+                .with_label("Expected table from pipeline", call.head));
             }
         }
     }

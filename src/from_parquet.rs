@@ -357,6 +357,7 @@ pub fn to_parquet_bytes(table: &Vec<Value>, span: Span) -> Result<Value, Labeled
         Some(Value::Record {
             val,
             internal_span: _,
+            ..
         }) => val,
         Some(_) => return Err(LabeledError::new("Not a Table")),
         None => return Err(LabeledError::new("Empty table")),
@@ -373,6 +374,7 @@ pub fn to_parquet_bytes(table: &Vec<Value>, span: Span) -> Result<Value, Labeled
             Value::Record {
                 val,
                 internal_span: _,
+                ..
             } => Ok(val.clone().into_owned()), // TODO return &Record ?
             _ => Err(LabeledError::new("Not a table")),
         })
