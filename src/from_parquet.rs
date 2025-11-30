@@ -233,7 +233,7 @@ fn schema_to_value(tp: &Type, span: Span) -> Value {
                     PhysicalType::BYTE_ARRAY | PhysicalType::FIXED_LEN_BYTE_ARRAY => Value::int(type_length as i64, span),
                     _ => Value::nothing(span)
                 },
-                "logical_type" => Value::string(logical_or_converted_type_to_string(basic_info.logical_type(), basic_info.converted_type(), precision, scale), span)
+                "logical_type" => Value::string(logical_or_converted_type_to_string(basic_info.logical_type_ref().cloned(), basic_info.converted_type(), precision, scale), span)
             );
             Value::record(rec, span)
         }
@@ -297,9 +297,10 @@ fn logical_or_converted_type_to_string(
             LogicalType::Uuid => "UUID".to_string(),
             LogicalType::Unknown => "UNKNOWN".to_string(),
             LogicalType::Float16 => "FLOAT_16".to_string(),
-            LogicalType::Variant => "Variant".to_string(),
-            LogicalType::Geometry => "Geometry".to_string(),
-            LogicalType::Geography => "Geography".to_string(),
+            LogicalType::Variant { .. } => "Variant".to_string(),
+            LogicalType::Geometry { .. } => "Geometry".to_string(),
+            LogicalType::Geography { .. } => "Geography".to_string(),
+            LogicalType::_Unknown { .. } => "UNKNOWN".to_string(),
         },
         None => match converted_type {
             ConvertedType::BSON => "BSON".to_string(),
@@ -331,9 +332,9 @@ fn logical_or_converted_type_to_string(
 
 fn time_unit_to_string(unit: TimeUnit) -> String {
     match unit {
-        TimeUnit::MILLIS(_) => "MILLISECONDS".to_string(),
-        TimeUnit::MICROS(_) => "MICROSECONDS".to_string(),
-        TimeUnit::NANOS(_) => "NANOSECONDS".to_string(),
+        TimeUnit::MILLIS => "MILLISECONDS".to_string(),
+        TimeUnit::MICROS => "MICROSECONDS".to_string(),
+        TimeUnit::NANOS => "NANOSECONDS".to_string(),
     }
 }
 
