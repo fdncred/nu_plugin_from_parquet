@@ -72,8 +72,9 @@ fn convert_to_nu(field: &Field, span: Span) -> Value {
         Field::Group(_row) => {
             unimplemented!("Nested structs not supported yet")
         }
-        Field::ListInternal(_list) => {
-            unimplemented!("Lists not supported yet")
+        Field::ListInternal(list) => {
+            let val = list.elements().iter().map(|e| convert_to_nu(e, span)).collect();
+            Value::list(val, span)
         }
         Field::MapInternal(_map) => {
             unimplemented!("Maps not supported yet")
@@ -519,6 +520,9 @@ fn value_to_type(column_name: &str, value: &Value) -> Result<Type, LabeledError>
 mod tests {
     use super::*;
     use parquet::data_type::ByteArray;
+    use parquet::file::reader::FileReader;
+    use parquet::file::serialized_reader::SerializedFileReader;
+    use bytes::Bytes;
 
     #[test]
     fn test_decimal_to_string() {
@@ -549,5 +553,57 @@ mod tests {
         assert_eq!(decimal_to_string(&decimal), "0.00000");
         let decimal = Decimal::from_bytes(ByteArray::from(vec![]), 5, 5);
         assert_eq!(decimal_to_string(&decimal), "0.00000");
+    }
+
+    #[test]
+    fn from_parquet_should_convert_list_of_strings_to_nu_list() {
+        let bytes = std::fs::read("tests/list_strings.parquet").unwrap();
+        let reader = SerializedFileReader::new(Bytes::from(bytes)).unwrap();
+        assert_eq!(reader.metadata().num_row_groups(), 1);
+        for row in reader.get_row_iter(None).unwrap() {
+            let columns = row.unwrap().into_columns();
+            assert_eq!(columns.len(), 1);
+            assert_eq!(columns[0].0, "languages");
+            let list = convert_to_nu(&columns[0].1, Span::test_data());
+            let inner_list = list.as_list().unwrap();
+            assert_eq!(inner_list.len(), 2);
+            assert_eq!(inner_list[0].as_str().unwrap(), "Rust");
+            assert_eq!(inner_list[1].as_str().unwrap(), "Nushell");
+        }
+    }
+
+    #[test]
+    fn from_parquet_should_convert_list_of_ints_to_nu_list() {
+        let bytes = std::fs::read("tests/list_ints.parquet").unwrap();
+        let reader = SerializedFileReader::new(Bytes::from(bytes)).unwrap();
+        assert_eq!(reader.metadata().num_row_groups(), 1);
+        for row in reader.get_row_iter(None).unwrap() {
+            let columns = row.unwrap().into_columns();
+            assert_eq!(columns.len(), 1);
+            assert_eq!(columns[0].0, "numbers");
+            let list = convert_to_nu(&columns[0].1, Span::test_data());
+            let inner_list = list.as_list().unwrap();
+            assert_eq!(inner_list.len(), 3);
+            assert_eq!(inner_list[0].as_int().unwrap(), 1);
+            assert_eq!(inner_list[1].as_int().unwrap(), 2);
+            assert_eq!(inner_list[2].as_int().unwrap(), 3);
+        }
+    }
+
+    #[test]
+    fn from_parquet_should_convert_list_of_floats_to_nu_list() {
+        let bytes = std::fs::read("tests/list_floats.parquet").unwrap();
+        let reader = SerializedFileReader::new(Bytes::from(bytes)).unwrap();
+        assert_eq!(reader.metadata().num_row_groups(), 1);
+        for row in reader.get_row_iter(None).unwrap() {
+            let columns = row.unwrap().into_columns();
+            assert_eq!(columns.len(), 1);
+            assert_eq!(columns[0].0, "floats");
+            let list = convert_to_nu(&columns[0].1, Span::test_data());
+            let inner_list = list.as_list().unwrap();
+            assert_eq!(inner_list.len(), 2);
+            assert_eq!(inner_list[0].as_float().unwrap(), 1.23);
+            assert_eq!(inner_list[1].as_float().unwrap(), 3.456);
+        }
     }
 }
