@@ -69,11 +69,21 @@ fn convert_to_nu(field: &Field, span: Span) -> Value {
             Value::date(val, span)
         }
         Field::Decimal(d) => Value::string(decimal_to_string(d), span),
-        Field::Group(_row) => {
-            unimplemented!("Nested structs not supported yet")
+        Field::Group(row) => {
+            let val = Record::from_iter(
+                row.clone()
+                    .into_columns()
+                    .iter()
+                    .map(|col| (col.0.clone(), convert_to_nu(&col.1, span))),
+            );
+            Value::record(val, span)
         }
         Field::ListInternal(list) => {
-            let val = list.elements().iter().map(|e| convert_to_nu(e, span)).collect();
+            let val = list
+                .elements()
+                .iter()
+                .map(|e| convert_to_nu(e, span))
+                .collect();
             Value::list(val, span)
         }
         Field::MapInternal(_map) => {
@@ -519,10 +529,10 @@ fn value_to_type(column_name: &str, value: &Value) -> Result<Type, LabeledError>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::Bytes;
     use parquet::data_type::ByteArray;
     use parquet::file::reader::FileReader;
     use parquet::file::serialized_reader::SerializedFileReader;
-    use bytes::Bytes;
 
     #[test]
     fn test_decimal_to_string() {
@@ -605,5 +615,106 @@ mod tests {
             assert_eq!(inner_list[0].as_float().unwrap(), 1.23);
             assert_eq!(inner_list[1].as_float().unwrap(), 3.456);
         }
+    }
+
+    #[test]
+    fn from_parquet_should_convert_nested_struct_to_nu_record() {
+        let bytes = std::fs::read("tests/nested_struct.parquet").unwrap();
+        let reader = SerializedFileReader::new(Bytes::from(bytes)).unwrap();
+        assert_eq!(reader.metadata().num_row_groups(), 1);
+        for row in reader.get_row_iter(None).unwrap() {
+            let columns = row.unwrap().into_columns();
+            assert_eq!(columns.len(), 1);
+            assert_eq!(columns[0].0, "person");
+            let record = convert_to_nu(&columns[0].1, Span::test_data());
+            let inner_record = record.as_record().unwrap();
+            assert_eq!(inner_record.len(), 2);
+            let first_name = inner_record
+                .get_index(inner_record.index_of("first_name").unwrap())
+                .unwrap();
+            assert_eq!("first_name", first_name.0);
+            assert_eq!("Greatest", first_name.1.as_str().unwrap());
+            let last_name = inner_record
+                .get_index(inner_record.index_of("last_name").unwrap())
+                .unwrap();
+            assert_eq!("last_name", last_name.0);
+            assert_eq!("Ever", last_name.1.as_str().unwrap());
+        }
+    }
+
+    #[test]
+    fn from_parquet_should_convert_nested_struct_with_nested_struct_to_nu_record() {
+        let bytes = std::fs::read("tests/nested_nested_struct.parquet").unwrap();
+        let reader = SerializedFileReader::new(Bytes::from(bytes)).unwrap();
+        assert_eq!(reader.metadata().num_row_groups(), 1);
+        for row in reader.get_row_iter(None).unwrap() {
+            let columns = row.unwrap().into_columns();
+            assert_eq!(columns.len(), 1);
+            assert_eq!(columns[0].0, "person");
+            let record = convert_to_nu(&columns[0].1, Span::test_data());
+            let inner_record = record.as_record().unwrap();
+            assert_eq!(inner_record.len(), 3);
+            let name = inner_record
+                .get_index(inner_record.index_of("name").unwrap())
+                .unwrap();
+            assert_eq!("name", name.0);
+            assert_eq!("Jason Bourne", name.1.as_str().unwrap());
+            let age = inner_record
+                .get_index(inner_record.index_of("age").unwrap())
+                .unwrap();
+            assert_eq!("age", age.0);
+            assert_eq!(70, age.1.as_int().unwrap());
+            let address = inner_record
+                .get_index(inner_record.index_of("address").unwrap())
+                .unwrap();
+            assert_eq!("address", address.0);
+            let inner_address = address.1.as_record().unwrap();
+            assert_eq!(inner_address.len(), 4);
+            let street = inner_address
+                .get_index(inner_address.index_of("street").unwrap())
+                .unwrap();
+            assert_eq!("street", street.0);
+            assert_eq!("123 Main St", street.1.as_str().unwrap());
+        }
+    }
+
+    #[test]
+    fn from_parquet_should_convert_list_of_nested_structs_to_nu_list() {
+        let bytes = std::fs::read("tests/list_nested_nested_struct_list.parquet").unwrap();
+        let reader = SerializedFileReader::new(Bytes::from(bytes)).unwrap();
+        assert_eq!(reader.metadata().num_row_groups(), 1);
+        let mut iter = reader.get_row_iter(None).unwrap();
+        let first_row = iter.next().unwrap().unwrap();
+        let second_row = iter.next().unwrap().unwrap();
+
+        let first_columns = first_row.into_columns();
+        assert_eq!(first_columns.len(), 1);
+        assert_eq!(first_columns[0].0, "person");
+        let first_record = convert_to_nu(&first_columns[0].1, Span::test_data());
+        let first_inner_record = first_record.as_record().unwrap();
+        assert_eq!(first_inner_record.len(), 4);
+        let movies = first_inner_record
+            .get_index(first_inner_record.index_of("movies").unwrap())
+            .unwrap()
+            .1
+            .as_list()
+            .unwrap();
+        assert_eq!(movies.len(), 3);
+        assert_eq!("The Bourne Identity", movies[0].as_str().unwrap());
+
+        let second_columns = second_row.into_columns();
+        assert_eq!(second_columns.len(), 1);
+        assert_eq!(second_columns[0].0, "person");
+        let second_record = convert_to_nu(&second_columns[0].1, Span::test_data());
+        let second_inner_record = second_record.as_record().unwrap();
+        assert_eq!(second_inner_record.len(), 4);
+        let movies = second_inner_record
+            .get_index(second_inner_record.index_of("movies").unwrap())
+            .unwrap()
+            .1
+            .as_list()
+            .unwrap();
+        assert_eq!(movies.len(), 3);
+        assert_eq!("Rocky", movies[0].as_str().unwrap());
     }
 }

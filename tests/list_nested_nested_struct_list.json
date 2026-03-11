@@ -1,0 +1,36 @@
+[
+  {
+    "person": {
+      "name": "Jason Bourne",
+      "age": 70,
+      "address": {
+        "street": "123 Main St",
+        "city": "Anytown",
+        "state": "FL",
+        "zip": "12345"
+      },
+      "movies": [
+        "The Bourne Identity",
+        "The Bourne Ultimatum",
+        "The Bourne Supremacy"
+      ]
+    }
+  },
+  {
+    "person": {
+      "name": "Rocky Balboa",
+      "age": 80,
+      "address": {
+        "street": "345 Main St",
+        "city": "Anytown",
+        "state": "PA",
+        "zip": "12345"
+      },
+      "movies": [
+        "Rocky",
+        "Rocky II",
+        "Rocky III"
+      ]
+    }
+  }
+]
