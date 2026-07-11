@@ -271,38 +271,29 @@ fn logical_or_converted_type_to_string(
         Some(logical_type) => match logical_type {
             LogicalType::Bson => "BSON".to_string(),
             LogicalType::Date => "DATE".to_string(),
-            LogicalType::Decimal { precision, scale } => {
-                format!("DECIMAL({},{})", precision, scale)
+            LogicalType::Decimal(decimal) => {
+                format!("DECIMAL({},{})", decimal.precision, decimal.scale)
             }
             LogicalType::Enum => "ENUM".to_string(),
-            LogicalType::Integer {
-                bit_width,
-                is_signed,
-            } => {
-                format!("INTEGER({},{})", bit_width, is_signed)
+            LogicalType::Integer(integer) => {
+                format!("INTEGER({},{})", integer.bit_width, integer.is_signed)
             }
             LogicalType::Json => "JSON".to_string(),
             LogicalType::List => "LIST".to_string(),
             LogicalType::Map => "MAP".to_string(),
             LogicalType::String => "STRING".to_string(),
-            LogicalType::Time {
-                is_adjusted_to_u_t_c,
-                unit,
-            } => {
+            LogicalType::Time(time) => {
                 format!(
                     "TIME({},{})",
-                    time_unit_to_string(unit),
-                    is_adjusted_to_u_t_c
+                    time_unit_to_string(time.unit),
+                    time.is_adjusted_to_u_t_c
                 )
             }
-            LogicalType::Timestamp {
-                is_adjusted_to_u_t_c,
-                unit,
-            } => {
+            LogicalType::Timestamp(timestamp) => {
                 format!(
                     "TIMESTAMP({},{})",
-                    time_unit_to_string(unit),
-                    is_adjusted_to_u_t_c
+                    time_unit_to_string(timestamp.unit),
+                    timestamp.is_adjusted_to_u_t_c
                 )
             }
             LogicalType::Uuid => "UUID".to_string(),
