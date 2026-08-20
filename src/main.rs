@@ -73,8 +73,8 @@ impl SimplePluginCommand for FromParquet {
         let span = input.span();
         match input {
             Value::Binary { val, .. } => match call.has_flag("metadata")? {
-                true => crate::from_parquet::metadata_from_parquet_bytes(val.clone(), span),
-                false => crate::from_parquet::from_parquet_bytes(val.clone(), span),
+                true => crate::from_parquet::metadata_from_parquet_bytes(val.to_vec(), span),
+                false => crate::from_parquet::from_parquet_bytes(val.to_vec(), span),
             },
             v => {
                 return Err(LabeledError::new(format!(
